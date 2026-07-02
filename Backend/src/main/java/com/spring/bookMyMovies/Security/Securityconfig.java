@@ -42,15 +42,18 @@ public class Securityconfig {
 
         http
             .csrf(csrf -> csrf.disable())
-
             .cors(Customizer.withDefaults())
 
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/admin/registeradminuser").permitAll()
+
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/movies/getallmovies").permitAll()
                 .requestMatchers("/api/shows/getallshows").permitAll()
                 .requestMatchers("/api/shows/getshowsbymovie/**").permitAll()
                 .requestMatchers("/api/theatre/gettheatrebylocation").permitAll()
+
                 .anyRequest().authenticated()
             )
 
@@ -59,7 +62,6 @@ public class Securityconfig {
             )
 
             .authenticationProvider(authenticationProvider())
-
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -68,9 +70,9 @@ public class Securityconfig {
     @Bean
     public AuthenticationProvider authenticationProvider() {
 
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService());
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider(userDetailsService());
 
-       // provider.setUserDetailsService(customUserdetailsService);
         provider.setPasswordEncoder(passwordEncoder());
 
         return provider;
@@ -96,12 +98,21 @@ public class Securityconfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "https://poetic-sopapillas-74692b.netlify.app",
+                "https://rococo-dodol-8bd85d.netlify.app"
+        ));
+
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
+
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", configuration);
 
