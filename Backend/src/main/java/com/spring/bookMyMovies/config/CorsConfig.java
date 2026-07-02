@@ -19,7 +19,7 @@ public class CorsConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "http://localhost:5173",
-                                "https://rococo-dodol-8bd85d.netlify.app"
+                                "https://poetic-sopapillas-74692b.netlify.app"
                         )
                         .allowedMethods("*")
                         .allowedHeaders("*")
