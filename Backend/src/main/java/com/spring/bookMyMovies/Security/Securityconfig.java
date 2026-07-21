@@ -100,7 +100,6 @@ public class Securityconfig {
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "https://poetic-sopapillas-74692b.netlify.app",
                 "https://bookmymoviesanywhere.netlify.app"
         ));
 
