@@ -11,7 +11,6 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = getToken();
 
-  // Do not send an old JWT token for login or registration
   const isAuthRequest = config.url?.startsWith('/api/auth/');
 
   if (token && !isAuthRequest) {
