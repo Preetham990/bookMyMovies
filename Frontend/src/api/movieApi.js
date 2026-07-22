@@ -1,10 +1,10 @@
 import api from './api';
 
-export const createShow = (payload) =>
-  api.post('/api/shows/createshows', payload);
+export const getAllMovies = () =>
+  api.get('/api/movies/getallmovies');
 
-export const getAllShows = () =>
-  api.get('/api/shows/getallshows');
+export const addMovie = (payload) =>
+  api.post('/api/movies/addmovie', payload);
 
-export const getShowsByMovie = (movieId) =>
-  api.get(`/api/shows/getshowsbymovie/${movieId}`);
+export const getMoviesByGenre = (genre) =>
+  api.get(`/api/movies/getmoviesbygenre/${genre}`);
