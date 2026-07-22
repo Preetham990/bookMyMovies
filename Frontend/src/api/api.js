@@ -2,20 +2,32 @@ import axios from 'axios';
 import { getToken, logout } from '../utils/auth';
 
 const api = axios.create({
-  baseURL:  'https://bookmymovies-8.onrender.com',
-  headers: { 'Content-Type': 'application/json' }
+  baseURL: 'https://bookmymovies-8.onrender.com',
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
 api.interceptors.request.use((config) => {
   const token = getToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // Do not send an old JWT token for login or registration
+  const isAuthRequest = config.url?.startsWith('/api/auth/');
+
+  if (token && !isAuthRequest) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) logout();
+    if (error?.response?.status === 401) {
+      logout();
+    }
+
     return Promise.reject(error);
   }
 );
