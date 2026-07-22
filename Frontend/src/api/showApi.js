@@ -1,7 +1,10 @@
 import api from './api';
-export const getAllShows = () => api.get('/shows/getallshows');
-export const getShowsByMovie = (id) => api.get(`/shows/getshowsbymovie/${id}`);
-export const getShowsByTheatre = (id) => api.get(`/shows/getshowsbytheatre/${id}`);
-export const createShows = (payload) => api.post('/shows/createshows', payload);
-export const updateShows = (id, payload) => api.put(`/shows/updateshows/${id}`, payload);
-export const deleteShows = (id) => api.delete(`/shows/deleteshows/${id}`);
+
+export const createShow = (payload) =>
+  api.post('/api/shows/createshows', payload);
+
+export const getAllShows = () =>
+  api.get('/api/shows/getallshows');
+
+export const getShowsByMovie = (movieId) =>
+  api.get(`/api/shows/getshowsbymovie/${movieId}`);
