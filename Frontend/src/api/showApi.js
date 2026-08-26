@@ -1,6 +1,6 @@
 import api from './api';
 
-export const createShow = (payload) =>
+export const createShows = (payload) =>
   api.post('/api/shows/createshows', payload);
 
 export const getAllShows = () =>
