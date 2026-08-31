@@ -122,7 +122,7 @@ public class Securityconfig {
 
         configuration.setAllowedOrigins(List.of(
             "http://localhost:5173",
-            "https://bookmymovieshere.netlify.app"
+            "https://bookmymoviehere.netlify.app"
         ));
 
         configuration.setAllowedMethods(List.of(
