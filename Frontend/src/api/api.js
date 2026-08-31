@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken, logout } from '../utils/auth';
 
 const api = axios.create({
-  baseURL: 'https://bookmymovies-15.onrender.com',
+  baseURL: 'https://bookmymovies-9-q0xf.onrender.com',
   headers: {
     'Content-Type': 'application/json'
   }
