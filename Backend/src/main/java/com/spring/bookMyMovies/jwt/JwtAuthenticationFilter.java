@@ -31,6 +31,29 @@ public class JwtAuthenticationFilter
     @Autowired
     private JwtService jwtService;
 
+                @Override
+protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain)
+        throws ServletException, IOException {
+
+    // Allow CORS preflight
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+        filterChain.doFilter(request, response);
+        return;
+    }
+
+    // Don't process JWT for login/register APIs
+    String path = request.getRequestURI();
+
+    if (path.startsWith("/api/auth/")) {
+        filterChain.doFilter(request, response);
+        return;
+    }
+
+    // Your existing JWT code below...
+
 
     @Override
     protected void doFilterInternal(
