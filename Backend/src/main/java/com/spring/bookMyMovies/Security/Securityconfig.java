@@ -2,7 +2,6 @@ package com.spring.bookMyMovies.Security;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -32,102 +31,52 @@ import com.spring.bookMyMovies.jwt.JwtAuthenticationFilter;
 @EnableMethodSecurity
 public class Securityconfig {
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomUserdetailsService customUserdetailsService;
 
-    @Autowired
-    private CustomUserdetailsService customUserdetailsService;
+    public Securityconfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            CustomUserdetailsService customUserdetailsService) {
 
-    // ==============================
-    // SECURITY FILTER CHAIN
-    // ==============================
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.customUserdetailsService = customUserdetailsService;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-
-            // Disable CSRF because we are using JWT
             .csrf(csrf -> csrf.disable())
 
-            // Enable CORS
             .cors(Customizer.withDefaults())
 
-            // Authorization rules
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+
             .authorizeHttpRequests(auth -> auth
 
-                // IMPORTANT:
-                // Allow browser CORS preflight requests
+                // IMPORTANT: Allow preflight requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // ==============================
-                // AUTH APIs
-                // ==============================
-
-                .requestMatchers("/auth/**").permitAll()
+                // Authentication APIs - PUBLIC
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // ==============================
-                // PUBLIC MOVIE APIs
-                // ==============================
+                // Public movie APIs
+                .requestMatchers("/api/movies/getallmovies").permitAll()
 
-                .requestMatchers(
-                    "/api/movies/getallmovies"
-                ).permitAll()
+                // Public show APIs
+                .requestMatchers("/api/shows/getallshows").permitAll()
+                .requestMatchers("/api/shows/getshowsbymovie/**").permitAll()
 
-                // ==============================
-                // PUBLIC SHOW APIs
-                // ==============================
+                // Public theatre API
+                .requestMatchers("/api/theatre/gettheatrebylocation").permitAll()
 
-                .requestMatchers(
-                    "/api/shows/getallshows"
-                ).permitAll()
-
-                .requestMatchers(
-                    "/api/shows/getshowsbymovie/**"
-                ).permitAll()
-
-                // ==============================
-                // PUBLIC THEATRE APIs
-                // ==============================
-
-                .requestMatchers(
-                    "/api/theatre/gettheatrebylocation"
-                ).permitAll()
-
-                // ==============================
-                // ADMIN REGISTRATION
-                // ==============================
-
-                .requestMatchers(
-                    "/admin/registeradminuser"
-                ).permitAll()
-
-                // Everything else requires authentication
+                // Everything else requires login
                 .anyRequest().authenticated()
             )
 
-            // ==============================
-            // SESSION MANAGEMENT
-            // ==============================
-
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS
-                )
-            )
-
-            // ==============================
-            // AUTHENTICATION PROVIDER
-            // ==============================
-
-            .authenticationProvider(
-                authenticationProvider()
-            )
-
-            // ==============================
-            // JWT FILTER
-            // ==============================
+            .authenticationProvider(authenticationProvider())
 
             .addFilterBefore(
                 jwtAuthenticationFilter,
@@ -137,133 +86,65 @@ public class Securityconfig {
         return http.build();
     }
 
-
-    // ==============================
-    // AUTHENTICATION PROVIDER
-    // ==============================
-
     @Bean
     public AuthenticationProvider authenticationProvider() {
 
         DaoAuthenticationProvider provider =
-            new DaoAuthenticationProvider(
-                userDetailsService()
-            );
+                new DaoAuthenticationProvider();
 
-        provider.setPasswordEncoder(
-            passwordEncoder()
-        );
+        provider.setUserDetailsService(customUserdetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
 
         return provider;
     }
 
-
-    // ==============================
-    // PASSWORD ENCODER
-    // ==============================
-
     @Bean
     public PasswordEncoder passwordEncoder() {
-
         return new BCryptPasswordEncoder();
     }
 
-
-    // ==============================
-    // USER DETAILS SERVICE
-    // ==============================
-
     @Bean
     public UserDetailsService userDetailsService() {
-
         return customUserdetailsService;
     }
 
-
-    // ==============================
-    // AUTHENTICATION MANAGER
-    // ==============================
-
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config
-    ) throws Exception {
+            AuthenticationConfiguration configuration)
+            throws Exception {
 
-        return config.getAuthenticationManager();
+        return configuration.getAuthenticationManager();
     }
-
-
-    // ==============================
-    // CORS CONFIGURATION
-    // ==============================
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-            new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
-        // ==============================
-        // ALLOWED FRONTEND URLS
-        // ==============================
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "https://bookmovieshere.netlify.app"
+        ));
 
-        configuration.setAllowedOrigins(
-            List.of(
-                "http://localhost:5173",
-                "https://bookmovieshere.netlify.app"
-            )
-        );
+        configuration.setAllowedMethods(List.of(
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS"
+        ));
 
+        configuration.setAllowedHeaders(List.of("*"));
 
-        // ==============================
-        // ALLOWED HTTP METHODS
-        // ==============================
+        configuration.setExposedHeaders(List.of("Authorization"));
 
-        configuration.setAllowedMethods(
-            List.of(
-                "GET",
-                "POST",
-                "PUT",
-                "DELETE",
-                "PATCH",
-                "OPTIONS"
-            )
-        );
-
-
-        // ==============================
-        // ALLOWED HEADERS
-        // ==============================
-
-        configuration.setAllowedHeaders(
-            List.of(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "Origin",
-                "X-Requested-With"
-            )
-        );
-
-
-        // ==============================
-        // ALLOW CREDENTIALS
-        // ==============================
-
-        configuration.setAllowCredentials(true);
-
-
-        // ==============================
-        // REGISTER CORS
-        // ==============================
+        configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source =
-            new UrlBasedCorsConfigurationSource();
+                new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration(
-            "/**",
-            configuration
-        );
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }
