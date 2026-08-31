@@ -8,3 +8,11 @@ export const getAllShows = () =>
 
 export const getShowsByMovie = (movieId) =>
   api.get(`/api/shows/getshowsbymovie/${movieId}`);
+
+// Update show
+export const updateShows = (showId, payload) =>
+  api.put(`/api/shows/updateshow/${showId}`, payload);
+
+// Delete show
+export const deleteShows = (showId) =>
+  api.delete(`/api/shows/deleteshow/${showId}`);
