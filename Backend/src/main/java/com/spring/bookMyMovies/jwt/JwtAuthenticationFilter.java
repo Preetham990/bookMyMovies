@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,25 +22,11 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final UserRepository userRepository;
-    private final JwtService jwtService;
+    @Autowired
+    private UserRepository userRepository;
 
-    public JwtAuthenticationFilter(
-            UserRepository userRepository,
-            JwtService jwtService) {
-
-        this.userRepository = userRepository;
-        this.jwtService = jwtService;
-    }
-
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-
-        String path = request.getServletPath();
-
-        return path.startsWith("/api/auth/")
-                || request.getMethod().equals("OPTIONS");
-    }
+    @Autowired
+    private JwtService jwtService;
 
     @Override
     protected void doFilterInternal(
@@ -48,12 +35,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        final String authHeader =
-                request.getHeader("Authorization");
+        // Allow CORS preflight request
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        if (authHeader == null ||
-                !authHeader.startsWith("Bearer ")) {
+        // Do NOT process JWT for authentication endpoints
+        String path = request.getServletPath();
 
+        if (path.startsWith("/api/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        final String authHeader = request.getHeader("Authorization");
+
+        // No JWT → continue normally
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -62,46 +61,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String jwtToken = authHeader.substring(7);
 
-            String username =
-                    jwtService.extractUsername(jwtToken);
+            String username = jwtService.extractUsername(jwtToken);
 
-            if (username != null &&
-                    SecurityContextHolder
-                        .getContext()
-                        .getAuthentication() == null) {
+            if (username != null
+                    && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                var user = userRepository
-                        .findByUsername(username)
-                        .orElse(null);
+                var userDetails = userRepository.findByUsername(username)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
 
-                if (user != null) {
-
-                    List<SimpleGrantedAuthority> authorities =
-                            user.getRole()
+                List<SimpleGrantedAuthority> authorities =
+                        userDetails.getRole()
                                 .stream()
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList());
 
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    username,
-                                    null,
-                                    authorities
-                            );
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                username,
+                                null,
+                                authorities
+                        );
 
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource()
+                                .buildDetails(request)
+                );
 
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(authToken);
-                }
+                SecurityContextHolder
+                        .getContext()
+                        .setAuthentication(authToken);
             }
 
         } catch (Exception e) {
 
+            // Invalid JWT → don't crash the request
             SecurityContextHolder.clearContext();
 
         }
