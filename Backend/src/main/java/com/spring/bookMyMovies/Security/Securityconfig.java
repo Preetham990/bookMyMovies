@@ -2,6 +2,7 @@ package com.spring.bookMyMovies.Security;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,16 +32,11 @@ import com.spring.bookMyMovies.jwt.JwtAuthenticationFilter;
 @EnableMethodSecurity
 public class Securityconfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final CustomUserdetailsService customUserdetailsService;
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public Securityconfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter,
-            CustomUserdetailsService customUserdetailsService) {
-
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        this.customUserdetailsService = customUserdetailsService;
-    }
+    @Autowired
+    private CustomUserdetailsService customUserdetailsService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -51,29 +47,41 @@ public class Securityconfig {
             .cors(Customizer.withDefaults())
 
             .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                session.sessionCreationPolicy(
+                    SessionCreationPolicy.STATELESS
+                )
             )
 
             .authorizeHttpRequests(auth -> auth
 
-                // IMPORTANT: Allow preflight requests
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // CORS preflight
+                .requestMatchers(HttpMethod.OPTIONS, "/**")
+                .permitAll()
 
-                // Authentication APIs - PUBLIC
-                .requestMatchers("/api/auth/**").permitAll()
+                // Authentication
+                .requestMatchers("/api/auth/**")
+                .permitAll()
 
-                // Public movie APIs
-                .requestMatchers("/api/movies/getallmovies").permitAll()
+                // Admin registration
+                .requestMatchers("/admin/registeradminuser")
+                .permitAll()
 
-                // Public show APIs
-                .requestMatchers("/api/shows/getallshows").permitAll()
-                .requestMatchers("/api/shows/getshowsbymovie/**").permitAll()
+                // Public APIs
+                .requestMatchers("/api/movies/getallmovies")
+                .permitAll()
 
-                // Public theatre API
-                .requestMatchers("/api/theatre/gettheatrebylocation").permitAll()
+                .requestMatchers("/api/shows/getallshows")
+                .permitAll()
 
-                // Everything else requires login
-                .anyRequest().authenticated()
+                .requestMatchers("/api/shows/getshowsbymovie/**")
+                .permitAll()
+
+                .requestMatchers("/api/theatre/gettheatrebylocation")
+                .permitAll()
+
+                // Everything else requires JWT
+                .anyRequest()
+                .authenticated()
             )
 
             .authenticationProvider(authenticationProvider())
@@ -90,9 +98,8 @@ public class Securityconfig {
     public AuthenticationProvider authenticationProvider() {
 
         DaoAuthenticationProvider provider =
-                new DaoAuthenticationProvider();
+            new DaoAuthenticationProvider(userDetailsService());
 
-        provider.setUserDetailsService(customUserdetailsService);
         provider.setPasswordEncoder(passwordEncoder());
 
         return provider;
@@ -110,20 +117,20 @@ public class Securityconfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration)
+            AuthenticationConfiguration config)
             throws Exception {
 
-        return configuration.getAuthenticationManager();
+        return config.getAuthenticationManager();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration =
+                new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
             "http://localhost:5173",
-            "http://localhost:5174",
             "https://bookmovieshere.netlify.app"
         ));
 
@@ -135,16 +142,22 @@ public class Securityconfig {
             "OPTIONS"
         ));
 
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of(
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "Origin"
+        ));
 
-        configuration.setExposedHeaders(List.of("Authorization"));
-
-        configuration.setAllowCredentials(false);
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration(
+            "/**",
+            configuration
+        );
 
         return source;
     }
