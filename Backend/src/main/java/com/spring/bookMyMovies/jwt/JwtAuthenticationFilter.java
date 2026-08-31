@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,11 +21,25 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final JwtService jwtService;
 
-    @Autowired
-    private JwtService jwtService;
+    public JwtAuthenticationFilter(
+            UserRepository userRepository,
+            JwtService jwtService) {
+
+        this.userRepository = userRepository;
+        this.jwtService = jwtService;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+
+        String path = request.getServletPath();
+
+        return path.startsWith("/api/auth/")
+                || request.getMethod().equals("OPTIONS");
+    }
 
     @Override
     protected void doFilterInternal(
@@ -35,130 +48,63 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        // =========================================
-        // 1. ALLOW CORS PREFLIGHT REQUEST
-        // =========================================
-
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // =========================================
-        // 2. SKIP JWT FOR LOGIN AND REGISTRATION
-        // =========================================
-
-        String path = request.getRequestURI();
-
-        if (path.startsWith("/api/auth/")) {
-
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // =========================================
-        // 3. GET AUTHORIZATION HEADER
-        // =========================================
-
-        String authHeader =
+        final String authHeader =
                 request.getHeader("Authorization");
 
-        // =========================================
-        // 4. NO JWT
-        // =========================================
-
         if (authHeader == null ||
-            !authHeader.startsWith("Bearer ")) {
+                !authHeader.startsWith("Bearer ")) {
 
             filterChain.doFilter(request, response);
             return;
         }
-
-        // =========================================
-        // 5. EXTRACT TOKEN
-        // =========================================
-
-        String jwtToken =
-                authHeader.substring(7);
-
-        String username;
-
-        // =========================================
-        // 6. EXTRACT USERNAME
-        // =========================================
 
         try {
 
-            username =
+            String jwtToken = authHeader.substring(7);
+
+            String username =
                     jwtService.extractUsername(jwtToken);
 
-        } catch (Exception e) {
+            if (username != null &&
+                    SecurityContextHolder
+                        .getContext()
+                        .getAuthentication() == null) {
 
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // =========================================
-        // 7. CHECK AUTHENTICATION
-        // =========================================
-
-        if (username != null &&
-            SecurityContextHolder
-                .getContext()
-                .getAuthentication() == null) {
-
-            var userDetails =
-                    userRepository
+                var user = userRepository
                         .findByUsername(username)
                         .orElse(null);
 
-            if (userDetails != null) {
+                if (user != null) {
 
-                // =========================================
-                // 8. GET USER ROLES
-                // =========================================
+                    List<SimpleGrantedAuthority> authorities =
+                            user.getRole()
+                                .stream()
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList());
 
-                List<SimpleGrantedAuthority> authorities =
-                        userDetails
-                            .getRole()
-                            .stream()
-                            .map(SimpleGrantedAuthority::new)
-                            .collect(Collectors.toList());
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    username,
+                                    null,
+                                    authorities
+                            );
 
-                // =========================================
-                // 9. CREATE AUTHENTICATION
-                // =========================================
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                username,
-                                null,
-                                authorities
-                        );
-
-                // =========================================
-                // 10. REQUEST DETAILS
-                // =========================================
-
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
-                );
-
-                // =========================================
-                // 11. SET SECURITY CONTEXT
-                // =========================================
-
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authToken);
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authToken);
+                }
             }
-        }
 
-        // =========================================
-        // 12. CONTINUE REQUEST
-        // =========================================
+        } catch (Exception e) {
+
+            SecurityContextHolder.clearContext();
+
+        }
 
         filterChain.doFilter(request, response);
     }
