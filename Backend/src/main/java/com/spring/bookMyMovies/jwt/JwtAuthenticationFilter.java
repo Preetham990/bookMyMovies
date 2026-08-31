@@ -20,40 +20,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Component
-public class JwtAuthenticationFilter
-        extends OncePerRequestFilter {
-
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserRepository userRepository;
 
-
     @Autowired
     private JwtService jwtService;
-
-                @Override
-protected void doFilterInternal(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        FilterChain filterChain)
-        throws ServletException, IOException {
-
-    // Allow CORS preflight
-    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-        filterChain.doFilter(request, response);
-        return;
-    }
-
-    // Don't process JWT for login/register APIs
-    String path = request.getRequestURI();
-
-    if (path.startsWith("/api/auth/")) {
-        filterChain.doFilter(request, response);
-        return;
-    }
-
-    // Your existing JWT code below...
-
 
     @Override
     protected void doFilterInternal(
@@ -62,127 +35,89 @@ protected void doFilterInternal(
             FilterChain filterChain)
             throws ServletException, IOException {
 
-
-        // =====================================================
+        // =========================================
         // 1. ALLOW CORS PREFLIGHT REQUEST
-        // =====================================================
+        // =========================================
 
-        /*
-         * Browser sends OPTIONS request before POST/PUT/DELETE
-         * when making a cross-origin request.
-         *
-         * We must NOT try to process JWT for OPTIONS.
-         */
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
 
-        if ("OPTIONS".equalsIgnoreCase(
-                request.getMethod())) {
-
-            filterChain.doFilter(
-                request,
-                response
-            );
-
+            filterChain.doFilter(request, response);
             return;
         }
 
+        // =========================================
+        // 2. SKIP JWT FOR LOGIN AND REGISTRATION
+        // =========================================
 
-        // =====================================================
-        // 2. GET AUTHORIZATION HEADER
-        // =====================================================
+        String path = request.getRequestURI();
 
-        final String authHeader =
+        if (path.startsWith("/api/auth/")) {
+
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // =========================================
+        // 3. GET AUTHORIZATION HEADER
+        // =========================================
+
+        String authHeader =
                 request.getHeader("Authorization");
 
-
-        // =====================================================
-        // 3. CHECK JWT HEADER
-        // =====================================================
+        // =========================================
+        // 4. NO JWT
+        // =========================================
 
         if (authHeader == null ||
             !authHeader.startsWith("Bearer ")) {
 
-            /*
-             * No JWT.
-             *
-             * Continue request.
-             *
-             * Public APIs such as registration/login
-             * can continue normally.
-             */
-
-            filterChain.doFilter(
-                request,
-                response
-            );
-
+            filterChain.doFilter(request, response);
             return;
         }
 
+        // =========================================
+        // 5. EXTRACT TOKEN
+        // =========================================
 
-        // =====================================================
-        // 4. EXTRACT JWT
-        // =====================================================
-
-        final String jwtToken =
+        String jwtToken =
                 authHeader.substring(7);
 
+        String username;
 
-        // =====================================================
-        // 5. EXTRACT USERNAME
-        // =====================================================
-
-        final String username;
+        // =========================================
+        // 6. EXTRACT USERNAME
+        // =========================================
 
         try {
 
             username =
-                jwtService.extractUsername(
-                    jwtToken
-                );
+                    jwtService.extractUsername(jwtToken);
 
         } catch (Exception e) {
 
-            /*
-             * Invalid JWT.
-             *
-             * Don't crash the server.
-             */
-
-            filterChain.doFilter(
-                request,
-                response
-            );
-
+            filterChain.doFilter(request, response);
             return;
         }
 
-
-        // =====================================================
-        // 6. CHECK USERNAME
-        // =====================================================
+        // =========================================
+        // 7. CHECK AUTHENTICATION
+        // =========================================
 
         if (username != null &&
             SecurityContextHolder
                 .getContext()
                 .getAuthentication() == null) {
 
-
-            // =================================================
-            // 7. FIND USER
-            // =================================================
-
             var userDetails =
                     userRepository
                         .findByUsername(username)
                         .orElse(null);
 
-
             if (userDetails != null) {
 
-
-                // =============================================
-                // 8. GET USER ROLE
-                // =============================================
+                // =========================================
+                // 8. GET USER ROLES
+                // =========================================
 
                 List<SimpleGrantedAuthority> authorities =
                         userDetails
@@ -191,49 +126,40 @@ protected void doFilterInternal(
                             .map(SimpleGrantedAuthority::new)
                             .collect(Collectors.toList());
 
-
-                // =============================================
-                // 9. CREATE AUTHENTICATION TOKEN
-                // =============================================
+                // =========================================
+                // 9. CREATE AUTHENTICATION
+                // =========================================
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
-                            username,
-                            null,
-                            authorities
+                                username,
+                                null,
+                                authorities
                         );
 
-
-                // =============================================
-                // 10. SET REQUEST DETAILS
-                // =============================================
+                // =========================================
+                // 10. REQUEST DETAILS
+                // =========================================
 
                 authToken.setDetails(
-                    new WebAuthenticationDetailsSource()
-                        .buildDetails(request)
+                        new WebAuthenticationDetailsSource()
+                                .buildDetails(request)
                 );
 
-
-                // =============================================
+                // =========================================
                 // 11. SET SECURITY CONTEXT
-                // =============================================
+                // =========================================
 
                 SecurityContextHolder
-                    .getContext()
-                    .setAuthentication(
-                        authToken
-                    );
+                        .getContext()
+                        .setAuthentication(authToken);
             }
         }
 
-
-        // =====================================================
+        // =========================================
         // 12. CONTINUE REQUEST
-        // =====================================================
+        // =========================================
 
-        filterChain.doFilter(
-            request,
-            response
-        );
+        filterChain.doFilter(request, response);
     }
 }
