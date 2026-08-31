@@ -38,48 +38,48 @@ public class Securityconfig {
     @Autowired
     private CustomUserdetailsService customUserdetailsService;
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+   @Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        http
-            .csrf(csrf -> csrf.disable())
+    http
+        .csrf(csrf -> csrf.disable())
 
-            .cors(Customizer.withDefaults())
+        .cors(Customizer.withDefaults())
 
-            .authorizeHttpRequests(auth -> auth
+        .authorizeHttpRequests(auth -> auth
 
-                // Allow CORS preflight requests
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            // Allow CORS preflight
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // Authentication APIs
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
+            // Authentication APIs
+            .requestMatchers("/api/auth/**").permitAll()
+            .requestMatchers("/auth/**").permitAll()
 
-                // Public APIs
-                .requestMatchers("/api/movies/getallmovies").permitAll()
-                .requestMatchers("/api/shows/getallshows").permitAll()
-                .requestMatchers("/api/shows/getshowsbymovie/**").permitAll()
-                .requestMatchers("/api/theatre/gettheatrebylocation").permitAll()
+            // Public APIs
+            .requestMatchers("/api/movies/getallmovies").permitAll()
+            .requestMatchers("/api/shows/getallshows").permitAll()
+            .requestMatchers("/api/shows/getshowsbymovie/**").permitAll()
+            .requestMatchers("/api/theatre/gettheatrebylocation").permitAll()
 
-                // Admin registration
-                .requestMatchers("/admin/registeradminuser").permitAll()
+            // Admin registration
+            .requestMatchers("/admin/registeradminuser").permitAll()
 
-                .anyRequest().authenticated()
-            )
+            .anyRequest().authenticated()
+        )
 
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
+        .sessionManagement(session -> session
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        )
 
-            .authenticationProvider(authenticationProvider())
+        .authenticationProvider(authenticationProvider())
 
-            .addFilterBefore(
-                jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class
-            );
+        .addFilterBefore(
+            jwtAuthenticationFilter,
+            UsernamePasswordAuthenticationFilter.class
+        );
 
-        return http.build();
-    }
+    return http.build();
+}
 
 
     @Bean
@@ -115,36 +115,33 @@ public class Securityconfig {
     }
 
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+   @Bean
+public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration = new CorsConfiguration();
+    CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-            "http://localhost:5173",
-            "https://bookmovieshere.netlify.app"
-        ));
+    configuration.setAllowedOrigins(List.of(
+        "http://localhost:5173",
+        "https://bookmovieshere.netlify.app"
+    ));
 
-        configuration.setAllowedMethods(List.of(
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "OPTIONS"
-        ));
+    configuration.setAllowedMethods(List.of(
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+    ));
 
-        configuration.setAllowedHeaders(List.of("*"));
+    configuration.setAllowedHeaders(List.of("*"));
 
-        configuration.setAllowCredentials(true);
+    configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+    UrlBasedCorsConfigurationSource source =
+            new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration(
-            "/**",
-            configuration
-        );
+    source.registerCorsConfiguration("/**", configuration);
 
-        return source;
-    }
+    return source;
+}
 }
