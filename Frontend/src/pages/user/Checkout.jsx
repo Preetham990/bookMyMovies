@@ -48,40 +48,43 @@ function Checkout() {
 
       const booking = bookingRes.data;
 
-navigate(`/booking-success/${booking.id}`, {
-  state: {
-    booking: {
-      id: booking.id,
-      bookingStatus: booking.bookingStatus,
-      bookingTime: booking.bookingTime,
-      price: booking.price,
-      seatNumber: booking.seatNumber,
-      numberOfSeat: booking.numberOfSeat,
-      shows: booking.shows,
-    },
-  },
-});
+      navigate(`/booking-success/${booking.id}`, {
+        state: {
+          booking: {
+            id: booking.id,
+            bookingStatus: booking.bookingStatus,
+            bookingTime: booking.bookingTime,
+            price: booking.price,
+            seatNumber: booking.seatNumber,
+            numberOfSeat: booking.numberOfSeat,
+            shows: booking.shows,
+          },
+        },
+      });
     } catch (err) {
-  console.log("BOOKING ERROR FULL:", err);
-  console.log("BOOKING ERROR STATUS:", err?.response?.status);
-  console.log("BOOKING ERROR DATA:", err?.response?.data);
+      console.log("BOOKING ERROR FULL:", err);
+      console.log("BOOKING ERROR STATUS:", err?.response?.status);
+      console.log("BOOKING ERROR DATA:", err?.response?.data);
 
-  let message = "Booking failed.";
+      let message = "Booking failed.";
 
-  if (err?.response?.status === 403) {
-    message = "Booking failed: Access denied (403). Please login again.";
-  } else if (err?.response?.status === 401) {
-    message = "Session expired. Please login again.";
-  } else if (err?.response?.data?.message) {
-    message = err.response.data.message;
-  } else if (typeof err?.response?.data === "string" && err.response.data.trim()) {
-    message = err.response.data;
-  } else if (err?.message) {
-    message = err.message;
-  }
+      if (err?.response?.status === 403) {
+        message =
+          "Booking failed: Access denied (403). Please login again.";
+      } else if (err?.response?.status === 401) {
+        message = "Session expired. Please login again.";
+      } else if (err?.response?.data?.message) {
+        message = err.response.data.message;
+      } else if (
+        typeof err?.response?.data === "string" &&
+        err.response.data.trim()
+      ) {
+        message = err.response.data;
+      } else if (err?.message) {
+        message = err.message;
+      }
 
-  alert(message);
-}
+      alert(message);
     } finally {
       setLoading(false);
     }
@@ -110,7 +113,9 @@ navigate(`/booking-success/${booking.id}`, {
 
         <p>Seats: {seatNumber.join(", ")}</p>
 
-        <p>Total: {rupee((show?.price || 0) * seatNumber.length)}</p>
+        <p>
+          Total: {rupee((show?.price || 0) * seatNumber.length)}
+        </p>
 
         <label>Your User ID</label>
 
