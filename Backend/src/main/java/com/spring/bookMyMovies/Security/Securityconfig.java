@@ -59,8 +59,11 @@ public class Securityconfig {
                 .permitAll()
 
                 // Authentication
-                .requestMatchers("/api/auth/**")
-                .permitAll()
+              .requestMatchers(HttpMethod.POST, "/api/auth/registernormaluser")
+.permitAll()
+
+.requestMatchers(HttpMethod.POST, "/api/auth/login")
+.permitAll()
 
                 // Admin registration
                 .requestMatchers("/admin/registeradminuser")
