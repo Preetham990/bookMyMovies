@@ -34,7 +34,12 @@ public class User implements UserDetails {
 	private String password;
 	
 	@ElementCollection(fetch = FetchType.EAGER)
-	Set<String> role;
+@CollectionTable(
+    name = "user_role",
+    joinColumns = @JoinColumn(name = "user_id")
+)
+@Column(name = "role")
+private Set<String> role;
 	@OneToMany(mappedBy = "user",fetch = FetchType.LAZY)
 	@JsonIgnore
 	private List<Booking> booking;
