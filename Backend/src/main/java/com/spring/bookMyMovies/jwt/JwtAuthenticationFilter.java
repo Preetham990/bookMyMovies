@@ -67,20 +67,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 var userDetails = userRepository.findByUsername(username)
-                        .orElseThrow(() -> new RuntimeException("User not found"));
+        .orElseThrow(() -> new RuntimeException("User not found"));
 
-                List<SimpleGrantedAuthority> authorities =
-                        userDetails.getRole()
-                                .stream()
-                                .map(SimpleGrantedAuthority::new)
-                                .collect(Collectors.toList());
+if (jwtService.isTokenValid(jwtToken, userDetails)) {
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                username,
-                                null,
-                                authorities
-                        );
+    List<SimpleGrantedAuthority> authorities =
+            userDetails.getRole()
+                    .stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+
+    UsernamePasswordAuthenticationToken authToken =
+            new UsernamePasswordAuthenticationToken(
+                    userDetails,
+                    null,
+                    authorities
+            );
+
+    authToken.setDetails(
+            new WebAuthenticationDetailsSource()
+                    .buildDetails(request)
+    );
+
+    SecurityContextHolder
+            .getContext()
+            .setAuthentication(authToken);
+}
 
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource()
@@ -92,12 +104,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         .setAuthentication(authToken);
             }
 
-        } catch (Exception e) {
-
-            // Invalid JWT → don't crash the request
-            SecurityContextHolder.clearContext();
-
-        }
+        }catch (Exception e) {
+    e.printStackTrace();
+    SecurityContextHolder.clearContext();
+}
 
         filterChain.doFilter(request, response);
     }
