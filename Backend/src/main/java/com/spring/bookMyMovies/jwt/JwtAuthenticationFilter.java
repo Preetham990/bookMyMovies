@@ -35,13 +35,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Allow CORS preflight request
+        // Allow CORS preflight requests
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Do NOT process JWT for authentication endpoints
+        // Do not process JWT for authentication endpoints
         String path = request.getServletPath();
 
         if (path.startsWith("/api/auth/")) {
@@ -49,65 +49,60 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Get Authorization header
         final String authHeader = request.getHeader("Authorization");
 
-        // No JWT → continue normally
+        // No JWT
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-
             String jwtToken = authHeader.substring(7);
 
+            // Extract username from JWT
             String username = jwtService.extractUsername(jwtToken);
 
             if (username != null
                     && SecurityContextHolder.getContext().getAuthentication() == null) {
 
+                // Find user from database
                 var userDetails = userRepository.findByUsername(username)
-        .orElseThrow(() -> new RuntimeException("User not found"));
+                        .orElseThrow(() -> new RuntimeException("User not found"));
 
-if (jwtService.isTokenValid(jwtToken, userDetails)) {
+                // Validate JWT
+                if (jwtService.isTokenValid(jwtToken, userDetails)) {
 
-    List<SimpleGrantedAuthority> authorities =
-            userDetails.getRole()
-                    .stream()
-                    .map(SimpleGrantedAuthority::new)
-                    .collect(Collectors.toList());
+                    List<SimpleGrantedAuthority> authorities =
+                            userDetails.getRole()
+                                    .stream()
+                                    .map(SimpleGrantedAuthority::new)
+                                    .collect(Collectors.toList());
 
-    UsernamePasswordAuthenticationToken authToken =
-            new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    authorities
-            );
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    authorities
+                            );
 
-    authToken.setDetails(
-            new WebAuthenticationDetailsSource()
-                    .buildDetails(request)
-    );
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
 
-    SecurityContextHolder
-            .getContext()
-            .setAuthentication(authToken);
-}
-
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
-                );
-
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authToken);
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authToken);
+                }
             }
 
-        }catch (Exception e) {
-    e.printStackTrace();
-    SecurityContextHolder.clearContext();
-}
+        } catch (Exception e) {
+            // Print the actual JWT error in Render logs
+            e.printStackTrace();
+            SecurityContextHolder.clearContext();
+        }
 
         filterChain.doFilter(request, response);
     }
