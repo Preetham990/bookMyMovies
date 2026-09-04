@@ -4,6 +4,7 @@ import { createBooking } from "../../api/bookingApi";
 import { setUserId } from "../../utils/auth";
 import { formatDateTime, movieTitle, rupee } from "../../utils/format";
 
+
 function Checkout() {
   const { state } = useLocation();
   const navigate = useNavigate();
