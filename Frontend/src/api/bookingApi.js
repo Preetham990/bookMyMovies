@@ -1,19 +1,19 @@
 import api from "./api";
 
 export const createBooking = (payload) =>
-  api.post("/booking/createbooking", payload);
+  api.post("/api/booking/createbooking", payload);
 
 export const getUserBooking = (userId) =>
-  api.get(`/booking/getuserbooking/${userId}`);
+  api.get(`/api/booking/getuserbooking/${userId}`);
 
 export const getAllBookings = () =>
-  api.get("/booking/getallbookings");
+  api.get("/api/booking/getallbookings");
 
 export const confirmBooking = (id) =>
-  api.put(`/booking/${id}/confirm`);
+  api.put(`/api/booking/${id}/confirm`);
 
 export const cancelBooking = (id) =>
-  api.put(`/booking/${id}/cancel`);
+  api.put(`/api/booking/${id}/cancel`);
 
 export const getBookedSeats = (showId) =>
-  api.get(`/booking/bookedseats/${showId}`);
+  api.get(`/api/booking/bookedseats/${showId}`);
